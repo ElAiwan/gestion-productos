@@ -3,6 +3,8 @@ package ni.edu.uam.gestion_productos.controller;
 import ni.edu.uam.gestion_productos.entity.Categoria;
 import ni.edu.uam.gestion_productos.repository.CategoriaRepository;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -23,4 +25,8 @@ public class CategoriaController {
         return repository.findAll();
     }
 
+    @PostMapping
+    public Categoria guardar(@RequestBody Categoria categoria) {
+        return repository.save(categoria);
+    }
 }
