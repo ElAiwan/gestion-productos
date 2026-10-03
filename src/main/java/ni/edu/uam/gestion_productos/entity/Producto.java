@@ -32,6 +32,11 @@ public class Producto {
 
     private int existencia;
 
+    // Reto final: relación Proveedor 1 ---- N Producto
+    @ManyToOne
+    @JoinColumn(name = "proveedor_id")
+    private Proveedor proveedor;
+
     // Getters y Setters
 
     public Integer getId() {
@@ -80,5 +85,13 @@ public class Producto {
 
     public void setExistencia(int existencia) {
         this.existencia = existencia;
+    }
+
+    public Proveedor getProveedor() {
+        return proveedor;
+    }
+
+    public void setProveedor(Proveedor proveedor) {
+        this.proveedor = proveedor;
     }
 }
