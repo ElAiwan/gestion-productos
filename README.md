@@ -265,6 +265,78 @@ JOIN categoria c ON c.id = p.categoria_id
 LEFT JOIN proveedor pr ON pr.id = p.proveedor_id;
 ```
 
+## Capturas de evidencia
+
+Capturas tomadas con la aplicación en ejecución. Todas están en la carpeta [`evidencias/`](evidencias).
+
+### Configuración y estructura del proyecto
+
+**Estructura de paquetes** (`controller`, `entity`, `repository`):
+
+![Estructura de paquetes](evidencias/15_estructura_paquetes.jpg)
+
+**Scripts de migración V1, V2 y V3** en `src/main/resources/db/migration`:
+
+![Scripts de migración](evidencias/16_scripts_migracion.jpg)
+
+**Arranque de la aplicación:** conexión a `jdbc:postgresql://localhost:5432/gestion_productos`, Flyway valida las 3 migraciones (el esquema ya está en la versión 3) y Hibernate se configura con `PostgreSQLDialect`:
+
+![Consola de arranque con Flyway](evidencias/14_consola_arranque_flyway.jpg)
+
+### Evidencia de PostgreSQL (pgAdmin)
+
+**Paso 2. Creación de la base de datos** `gestion_productos`:
+
+![Base de datos creada](evidencias/01_base_datos_creada.jpg)
+
+**Historial de Flyway** (`flyway_schema_history`) con V1, V2 y V3 aplicadas correctamente:
+
+![flyway_schema_history](evidencias/02_flyway_schema_history.jpg)
+
+**Diagrama de relaciones (ERD generado por pgAdmin):** `categoria 1 ── N producto` y `proveedor 1 ── N producto`:
+
+![Diagrama ERD](evidencias/04_diagrama_relaciones_erd.jpg)
+
+**Productos con su categoría y su proveedor** (consulta con `JOIN`):
+
+![Productos relacionados](evidencias/03_productos_relacionados_sql.jpg)
+
+### Pruebas en Postman
+
+**Paso 9. POST /api/categorias** (Computadoras):
+
+![POST categoría](evidencias/09_post_categoria.jpg)
+
+**POST /api/categorias** (Accesorios y Monitores):
+
+![POST categorías](evidencias/11_post_categorias_accesorios_monitores.jpg)
+
+**Paso 8. GET /api/categorias** con las tres categorías creadas:
+
+![GET categorías](evidencias/05_get_categorias.jpg)
+
+**Paso 11. POST /api/productos** (LAP-001 relacionado con la categoría 1):
+
+![POST producto](evidencias/10_post_producto_LAP-001.jpg)
+
+**Reto final. POST /api/proveedores** (dos proveedores):
+
+![POST proveedores](evidencias/12_post_proveedores.jpg)
+
+**Reto final. GET /api/proveedores:**
+
+![GET proveedores](evidencias/06_get_proveedores.jpg)
+
+**Reto final. POST /api/productos** con proveedor asociado (MOU-001 y MON-001):
+
+![POST productos con proveedor](evidencias/13_post_productos_con_proveedor.jpg)
+
+**Pasos 10 y 11. GET /api/productos:** cada producto muestra su categoría y su proveedor como objetos anidados:
+
+![GET productos parte 1](evidencias/07_get_productos_parte1.jpg)
+
+![GET productos parte 2](evidencias/08_get_productos_parte2.jpg)
+
 ## Comprobación de aprendizaje
 
 **1. ¿Cuál es la función de Spring Data JPA?**
