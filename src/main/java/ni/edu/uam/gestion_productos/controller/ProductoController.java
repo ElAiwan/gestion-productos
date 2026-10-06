@@ -66,4 +66,12 @@ public class ProductoController {
         return productoService
                 .listarPorCategoria(categoriaId);
     }
+
+    @PostMapping("/{productoId}/etiquetas/{etiquetaId}")
+    public Producto agregarEtiqueta(
+            @PathVariable Integer productoId,
+            @PathVariable Integer etiquetaId) {
+
+        return productoService.agregarEtiqueta(productoId, etiquetaId);
+    }
 }

@@ -2,8 +2,10 @@ package ni.edu.uam.gestion_productos.service;
 
 import ni.edu.uam.gestion_productos.dto.ProductoRequestDTO;
 import ni.edu.uam.gestion_productos.entity.Categoria;
+import ni.edu.uam.gestion_productos.entity.Etiqueta;
 import ni.edu.uam.gestion_productos.entity.Producto;
 import ni.edu.uam.gestion_productos.repository.CategoriaRepository;
+import ni.edu.uam.gestion_productos.repository.EtiquetaRepository;
 import ni.edu.uam.gestion_productos.repository.ProductoRepository;
 import org.springframework.stereotype.Service;
 
@@ -14,11 +16,14 @@ public class ProductoService {
 
     private final ProductoRepository productoRepository;
     private final CategoriaRepository categoriaRepository;
+    private final EtiquetaRepository etiquetaRepository;
 
     public ProductoService(ProductoRepository productoRepository,
-                           CategoriaRepository categoriaRepository) {
+                           CategoriaRepository categoriaRepository,
+                           EtiquetaRepository etiquetaRepository) {
         this.productoRepository = productoRepository;
         this.categoriaRepository = categoriaRepository;
+        this.etiquetaRepository = etiquetaRepository;
     }
 
     public List<Producto> listar() {
@@ -82,5 +87,23 @@ public class ProductoService {
 
         return productoRepository
                 .findByCategoriaId(categoriaId);
+    }
+
+    public Producto agregarEtiqueta(
+            Integer productoId,
+            Integer etiquetaId) {
+
+        Producto producto =
+                buscarPorId(productoId);
+
+        Etiqueta etiqueta =
+                etiquetaRepository.findById(etiquetaId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Etiqueta no encontrada"));
+
+        producto.getEtiquetas().add(etiqueta);
+
+        return productoRepository.save(producto);
     }
 }
