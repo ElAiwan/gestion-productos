@@ -3,6 +3,8 @@ package ni.edu.uam.gestion_productos.controller;
 import ni.edu.uam.gestion_productos.dto.ProductoRequestDTO;
 import ni.edu.uam.gestion_productos.entity.Producto;
 import ni.edu.uam.gestion_productos.service.ProductoService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -46,5 +48,14 @@ public class ProductoController {
             @RequestBody ProductoRequestDTO dto) {
 
         return productoService.actualizar(id, dto);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(
+            @PathVariable Integer id) {
+
+        productoService.eliminar(id);
+
+        return ResponseEntity.noContent().build();
     }
 }
