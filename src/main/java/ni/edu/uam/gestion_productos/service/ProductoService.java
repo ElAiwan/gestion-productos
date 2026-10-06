@@ -53,6 +53,26 @@ public class ProductoService {
         return productoRepository.save(producto);
     }
 
+    public Producto actualizar(
+            Integer id,
+            ProductoRequestDTO dto) {
+
+        Producto producto = buscarPorId(id);
+
+        Categoria categoria = categoriaRepository
+                .findById(dto.getCategoriaId())
+                .orElseThrow(() ->
+                        new RuntimeException("Categoria no encontrada"));
+
+        producto.setCodigo(dto.getCodigo());
+        producto.setNombre(dto.getNombre());
+        producto.setPrecioVenta(dto.getPrecioVenta());
+        producto.setExistencia(dto.getExistencia());
+        producto.setCategoria(categoria);
+
+        return productoRepository.save(producto);
+    }
+
     public void eliminar(Integer id) {
         productoRepository.deleteById(id);
     }
