@@ -1,5 +1,6 @@
 package ni.edu.uam.gestion_productos.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -21,7 +22,12 @@ public class Categoria {
 
     private boolean activa;
 
+    // Lado inverso de la relación Uno a Muchos: la clave foránea
+    // (categoria_id) está en la tabla producto.
+    // @JsonIgnore evita la recursión infinita al generar JSON
+    // (producto -> categoria -> productos -> categoria -> ...).
     @OneToMany(mappedBy = "categoria")
+    @JsonIgnore
     private List<Producto> productos;
 
     // Getters y Setters
