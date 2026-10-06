@@ -76,4 +76,11 @@ public class ProductoService {
     public void eliminar(Integer id) {
         productoRepository.deleteById(id);
     }
+
+    public List<Producto> listarPorCategoria(
+            Integer categoriaId) {
+
+        return productoRepository
+                .findByCategoriaId(categoriaId);
+    }
 }

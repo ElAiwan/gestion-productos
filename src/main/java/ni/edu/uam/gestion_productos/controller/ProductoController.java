@@ -58,4 +58,12 @@ public class ProductoController {
 
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/categoria/{categoriaId}")
+    public List<Producto> listarPorCategoria(
+            @PathVariable Integer categoriaId) {
+
+        return productoService
+                .listarPorCategoria(categoriaId);
+    }
 }
