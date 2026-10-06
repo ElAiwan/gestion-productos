@@ -74,4 +74,23 @@ public class ProductoController {
 
         return productoService.agregarEtiqueta(productoId, etiquetaId);
     }
+
+    // Reto 1: eliminar solo la asociación Producto–Etiqueta
+    @DeleteMapping("/{productoId}/etiquetas/{etiquetaId}")
+    public ResponseEntity<Void> quitarEtiqueta(
+            @PathVariable Integer productoId,
+            @PathVariable Integer etiquetaId) {
+
+        productoService.quitarEtiqueta(productoId, etiquetaId);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    // Reto 2: consultar productos por etiqueta
+    @GetMapping("/etiqueta/{etiquetaId}")
+    public List<Producto> listarPorEtiqueta(
+            @PathVariable Integer etiquetaId) {
+
+        return productoService.listarPorEtiqueta(etiquetaId);
+    }
 }

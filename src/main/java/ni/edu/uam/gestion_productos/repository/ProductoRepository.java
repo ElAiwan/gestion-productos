@@ -9,4 +9,7 @@ public interface ProductoRepository
         extends JpaRepository<Producto, Integer> {
 
     List<Producto> findByCategoriaId(Integer categoriaId);
+
+    // Reto 2: productos asociados a una etiqueta (relación Muchos a Muchos)
+    List<Producto> findByEtiquetasId(Integer etiquetaId);
 }

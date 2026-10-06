@@ -106,4 +106,32 @@ public class ProductoService {
 
         return productoRepository.save(producto);
     }
+
+    // Reto 1: elimina solo la asociación en producto_etiqueta;
+    // el producto y la etiqueta siguen existiendo.
+    public void quitarEtiqueta(
+            Integer productoId,
+            Integer etiquetaId) {
+
+        Producto producto = buscarPorId(productoId);
+
+        if (!etiquetaRepository.existsById(etiquetaId)) {
+            throw new RuntimeException("Etiqueta no encontrada");
+        }
+
+        producto.getEtiquetas()
+                .removeIf(etiqueta -> etiqueta.getId().equals(etiquetaId));
+
+        productoRepository.save(producto);
+    }
+
+    // Reto 2: productos que tienen asociada una etiqueta.
+    public List<Producto> listarPorEtiqueta(Integer etiquetaId) {
+
+        if (!etiquetaRepository.existsById(etiquetaId)) {
+            throw new RuntimeException("Etiqueta no encontrada");
+        }
+
+        return productoRepository.findByEtiquetasId(etiquetaId);
+    }
 }
