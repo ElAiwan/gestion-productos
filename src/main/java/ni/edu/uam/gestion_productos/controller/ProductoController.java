@@ -1,10 +1,9 @@
 package ni.edu.uam.gestion_productos.controller;
 
 import ni.edu.uam.gestion_productos.entity.Producto;
-import ni.edu.uam.gestion_productos.repository.ProductoRepository;
+import ni.edu.uam.gestion_productos.service.ProductoService;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -14,19 +13,19 @@ import java.util.List;
 @RequestMapping("/api/productos")
 public class ProductoController {
 
-    private final ProductoRepository repository;
+    private final ProductoService productoService;
 
-    public ProductoController(ProductoRepository repository) {
-        this.repository = repository;
+    public ProductoController(ProductoService productoService) {
+        this.productoService = productoService;
     }
 
     @GetMapping
     public List<Producto> listar() {
-        return repository.findAll();
+        return productoService.listar();
     }
 
-    @PostMapping
-    public Producto guardar(@RequestBody Producto producto) {
-        return repository.save(producto);
+    @GetMapping("/{id}")
+    public Producto buscar(@PathVariable Integer id) {
+        return productoService.buscarPorId(id);
     }
 }
