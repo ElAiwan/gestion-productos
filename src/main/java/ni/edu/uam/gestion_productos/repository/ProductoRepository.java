@@ -12,4 +12,7 @@ public interface ProductoRepository
 
     // Reto 2: productos asociados a una etiqueta (relación Muchos a Muchos)
     List<Producto> findByEtiquetasId(Integer etiquetaId);
+
+    // Usado por ProveedorService para no eliminar proveedores con productos
+    boolean existsByProveedorId(Integer proveedorId);
 }
