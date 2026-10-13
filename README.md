@@ -414,10 +414,10 @@ El paquete base es `ni.edu.uam.gestion_productos`. Spring Initializr generó est
 ```
 ni.edu.uam.gestion_productos
 ├── controller   → CategoriaController, ProductoController, ProveedorController, EtiquetaController
-├── dto          → ProductoRequestDTO
+├── dto          → ProductoRequestDTO, CategoriaRequestDTO, ProveedorRequestDTO, EtiquetaRequestDTO
 ├── entity       → Categoria, Producto, Proveedor, Etiqueta
 ├── repository   → CategoriaRepository, ProductoRepository, ProveedorRepository, EtiquetaRepository
-└── service      → ProductoService, EtiquetaService
+└── service      → ProductoService, CategoriaService, ProveedorService, EtiquetaService
 ```
 
 ![Estructura de paquetes](evidencias/laboratorio1/EST_estructura_paquetes.jpg)
@@ -806,3 +806,81 @@ La respuesta hace el camino inverso: el repositorio devuelve la entidad guardada
 ## Conclusión (Laboratorio #1)
 
 En este laboratorio la API pasó de controladores que usaban directamente los repositorios a una arquitectura en capas **Controller → Service → Repository**, con la lógica de negocio concentrada en `ProductoService`. El uso de `ProductoRequestDTO` permitió controlar los datos recibidos y validar la categoría por su id, y se completó el CRUD de productos (GET, POST, PUT y DELETE) junto con la consulta por categoría. Al volver bidireccional la relación Categoría–Producto apareció el error de recursión infinita al generar JSON; se detectó al probar el endpoint y se corrigió con `@JsonIgnore` en el lado inverso. La migración V4 incorporó la relación Muchos a Muchos con `Etiqueta` mediante la tabla intermedia `producto_etiqueta` y `@ManyToMany` con `@JoinTable`. Finalmente, el reto mostró cómo eliminar solo una asociación y cómo consultar productos navegando una relación N:N con una consulta derivada.
+
+---
+
+# Correcciones solicitadas por el docente (Laboratorio #1)
+
+> *"Al revisar los cambios realizados, observé que únicamente se creó la clase ProductoRequestDTO.java. Sin embargo, aún están pendientes de implementar las clases correspondientes a Categoría, Etiqueta y Proveedor, por lo que sus respectivos controladores tampoco fueron actualizados."*
+
+Se aplicó a **Categoría, Proveedor y Etiqueta** la misma arquitectura que a Producto: **DTO de entrada + Service con la lógica de negocio + Controller que solo usa el Service**, con CRUD completo en los tres.
+
+## Clases creadas y actualizadas
+
+| Entidad | DTO | Service | Controller |
+|---|---|---|---|
+| Categoría | `CategoriaRequestDTO` (`nombre`, `activa`) | `CategoriaService` (nuevo) | `CategoriaController` (antes usaba el repositorio directamente) |
+| Proveedor | `ProveedorRequestDTO` (`nombre`, `telefono`, `correo`, `activo`) | `ProveedorService` (nuevo) | `ProveedorController` (antes usaba el repositorio directamente) |
+| Etiqueta | `EtiquetaRequestDTO` (`nombre`) | `EtiquetaService` (completado: buscar, actualizar, eliminar) | `EtiquetaController` (antes recibía la entidad y solo tenía GET y POST) |
+| Producto | `ProductoRequestDTO` + **`proveedorId`** (opcional) | `ProductoService` asigna el proveedor | sin cambios |
+
+Reglas de negocio en los servicios:
+
+- **Categoría:** no se puede eliminar si tiene productos asociados. Se usa la relación bidireccional `Categoria.productos` del paso 8.
+- **Proveedor:** no se puede eliminar si tiene productos asociados (`ProductoRepository.existsByProveedorId`).
+- **Etiqueta:** al eliminarla, primero se quitan sus asociaciones en `producto_etiqueta`, porque `Producto` es el lado propietario de la relación Muchos a Muchos. Así no se viola la clave foránea.
+- **`activa` y `activo`** valen `true` por defecto si no se envían al crear.
+- **`proveedorId`** es opcional en `ProductoRequestDTO`. Si no se envía, el producto queda sin proveedor, y si el id no existe responde "Proveedor no encontrado".
+
+## Endpoints
+
+| Recurso | GET (listar) | GET `/{id}` | POST | PUT `/{id}` | DELETE `/{id}` |
+|---|---|---|---|---|---|
+| `/api/categorias` | ✔ | ✔ | ✔ `CategoriaRequestDTO` | ✔ | ✔ 204 |
+| `/api/proveedores` | ✔ | ✔ | ✔ `ProveedorRequestDTO` | ✔ | ✔ 204 |
+| `/api/etiquetas` | ✔ | ✔ | ✔ `EtiquetaRequestDTO` | ✔ | ✔ 204 |
+| `/api/productos` | ✔ | ✔ | ✔ `ProductoRequestDTO` | ✔ | ✔ 204 |
+
+## Commits (uno por cambio, cada uno probado y subido por separado)
+
+| Commit | Cambio |
+|---|---|
+| `1d61189` | Crear `CategoriaRequestDTO` |
+| `8b99ee7` | Crear `CategoriaService` |
+| `262881b` | `CategoriaController` usa `CategoriaService` y el DTO (CRUD completo) |
+| `4be43a2` | Crear `ProveedorRequestDTO` |
+| `1512071` | Crear `ProveedorService` |
+| `338b661` | `ProveedorController` usa `ProveedorService` y el DTO (CRUD completo) |
+| `1841aa4` | Crear `EtiquetaRequestDTO` |
+| `dbeb85a` | Completar `EtiquetaService` y actualizar `EtiquetaController`. Van juntos porque el método `guardar` del servicio cambió de firma y el controlador debía cambiar en el mismo commit para que el proyecto compilara. |
+| `487fb57` | `proveedorId` en `ProductoRequestDTO` y asignación del proveedor en `ProductoService` |
+
+## Evidencias en Postman
+
+**Categoría.** POST, PUT y DELETE:
+
+![POST categoría](evidencias/correcciones/C1_post_categoria.jpg)
+
+![PUT categoría](evidencias/correcciones/C2_put_categoria.jpg)
+
+![DELETE categoría](evidencias/correcciones/C3_delete_categoria.jpg)
+
+**Proveedor.** POST, PUT y DELETE:
+
+![POST proveedor](evidencias/correcciones/C4_post_proveedor.jpg)
+
+![PUT proveedor](evidencias/correcciones/C5_put_proveedor.jpg)
+
+![DELETE proveedor](evidencias/correcciones/C6_delete_proveedor.jpg)
+
+**Etiqueta.** POST, PUT y DELETE. Antes del DELETE, la etiqueta 6 se asoció al producto 4. La eliminación respondió 204 y la etiqueta desapareció del producto, que conservó "Oferta" y "Gaming":
+
+![POST etiqueta](evidencias/correcciones/C7_post_etiqueta.jpg)
+
+![PUT etiqueta](evidencias/correcciones/C8_put_etiqueta.jpg)
+
+![DELETE etiqueta](evidencias/correcciones/C9_delete_etiqueta.jpg)
+
+**Producto con `proveedorId`.** `PUT /api/productos/4` asigna el proveedor 2 al teclado:
+
+![Producto con proveedorId](evidencias/correcciones/C10_producto_con_proveedorId.jpg)
