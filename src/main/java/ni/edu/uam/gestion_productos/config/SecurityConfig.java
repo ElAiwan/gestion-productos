@@ -108,7 +108,13 @@ public class SecurityConfig {
                     .hasAnyRole("USER", "ADMIN")
                 .requestMatchers("/api/productos/**")
                     .hasRole("ADMIN")
-                // Categorías: se protegerán en el reto final.
+                // Reto final: categorías por rol.
+                // GET (/api/categorias y /api/categorias/{id}): USER o ADMIN
+                .requestMatchers(HttpMethod.GET, "/api/categorias/**")
+                    .hasAnyRole("USER", "ADMIN")
+                // POST, PUT y DELETE: solo ADMIN
+                .requestMatchers("/api/categorias/**")
+                    .hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth -> oauth.jwt(jwt ->
