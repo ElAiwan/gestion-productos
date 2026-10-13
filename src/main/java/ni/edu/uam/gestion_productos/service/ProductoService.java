@@ -4,9 +4,11 @@ import ni.edu.uam.gestion_productos.dto.ProductoRequestDTO;
 import ni.edu.uam.gestion_productos.entity.Categoria;
 import ni.edu.uam.gestion_productos.entity.Etiqueta;
 import ni.edu.uam.gestion_productos.entity.Producto;
+import ni.edu.uam.gestion_productos.entity.Proveedor;
 import ni.edu.uam.gestion_productos.repository.CategoriaRepository;
 import ni.edu.uam.gestion_productos.repository.EtiquetaRepository;
 import ni.edu.uam.gestion_productos.repository.ProductoRepository;
+import ni.edu.uam.gestion_productos.repository.ProveedorRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,13 +19,16 @@ public class ProductoService {
     private final ProductoRepository productoRepository;
     private final CategoriaRepository categoriaRepository;
     private final EtiquetaRepository etiquetaRepository;
+    private final ProveedorRepository proveedorRepository;
 
     public ProductoService(ProductoRepository productoRepository,
                            CategoriaRepository categoriaRepository,
-                           EtiquetaRepository etiquetaRepository) {
+                           EtiquetaRepository etiquetaRepository,
+                           ProveedorRepository proveedorRepository) {
         this.productoRepository = productoRepository;
         this.categoriaRepository = categoriaRepository;
         this.etiquetaRepository = etiquetaRepository;
+        this.proveedorRepository = proveedorRepository;
     }
 
     public List<Producto> listar() {
@@ -54,6 +59,7 @@ public class ProductoService {
         producto.setPrecioVenta(dto.getPrecioVenta());
         producto.setExistencia(dto.getExistencia());
         producto.setCategoria(categoria);
+        producto.setProveedor(buscarProveedor(dto.getProveedorId()));
 
         return productoRepository.save(producto);
     }
@@ -74,8 +80,21 @@ public class ProductoService {
         producto.setPrecioVenta(dto.getPrecioVenta());
         producto.setExistencia(dto.getExistencia());
         producto.setCategoria(categoria);
+        producto.setProveedor(buscarProveedor(dto.getProveedorId()));
 
         return productoRepository.save(producto);
+    }
+
+    // proveedorId es opcional: si no se envía, el producto queda sin proveedor
+    private Proveedor buscarProveedor(Integer proveedorId) {
+
+        if (proveedorId == null) {
+            return null;
+        }
+
+        return proveedorRepository.findById(proveedorId)
+                .orElseThrow(() ->
+                        new RuntimeException("Proveedor no encontrado"));
     }
 
     public void eliminar(Integer id) {

@@ -9,6 +9,7 @@ public class ProductoRequestDTO {
     private BigDecimal precioVenta;
     private Integer existencia;
     private Integer categoriaId;
+    private Integer proveedorId;
 
     // Getters y Setters
 
@@ -50,5 +51,13 @@ public class ProductoRequestDTO {
 
     public void setCategoriaId(Integer categoriaId) {
         this.categoriaId = categoriaId;
+    }
+
+    public Integer getProveedorId() {
+        return proveedorId;
+    }
+
+    public void setProveedorId(Integer proveedorId) {
+        this.proveedorId = proveedorId;
     }
 }
