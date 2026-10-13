@@ -102,6 +102,9 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // Reto adicional: el perfil exige token (va antes de /api/auth/**)
+                .requestMatchers("/api/auth/perfil")
+                    .authenticated()
                 .requestMatchers("/api/auth/**", "/api/publico/**")
                     .permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/productos/**")
