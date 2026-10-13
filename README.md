@@ -2,10 +2,11 @@
 
 Servicios Web, Unidad II: Desarrollo de Servicios Web con Spring Boot (UAM).
 
-Este repositorio contiene dos prácticas sobre el mismo proyecto:
+Este repositorio contiene tres prácticas sobre el mismo proyecto:
 
 1. **Práctica guiada #1: Persistencia y relaciones con Spring Data JPA**: conexión a PostgreSQL, entidades, repositorios, relaciones y migraciones con Flyway (V1 a V3). Es la primera parte de este README.
 2. **Práctica guiada #2: Laboratorio #1, Implementación de persistencia con Spring Data JPA, modelos, migraciones y relaciones**: capa de servicios, DTOs, CRUD completo, consultas por relación, relación Uno a Muchos bidireccional y relación Muchos a Muchos (V4). Ver [Laboratorio #1](#laboratorio-1-servicios-dtos-crud-y-relaciones).
+3. **Práctica guiada n.º 9: Seguridad con Spring Security y JWT** (rama `seguridad-jwt`): login con JWT HS256, reglas de acceso por rol para productos y categorías, y endpoint de perfil. Ver [Práctica guiada n.º 9](#práctica-guiada-nº-9-seguridad-con-spring-security-y-jwt).
 
 API REST desarrollada con Spring Boot que se conecta a PostgreSQL usando Spring Data JPA e Hibernate. Las entidades están relacionadas, se acceden con repositorios y el esquema de la base de datos se gestiona con migraciones de Flyway.
 
@@ -17,7 +18,7 @@ API REST desarrollada con Spring Boot que se conecta a PostgreSQL usando Spring 
 | Lenguaje | Java 21 |
 | Framework | Spring Boot 4.1.1 |
 | Group / Artifact | `ni.edu.uam` / `gestion-productos` |
-| Dependencias | Spring Web, Spring Data JPA, PostgreSQL Driver, Validation, Flyway Migration |
+| Dependencias | Spring Web, Spring Data JPA, PostgreSQL Driver, Validation, Flyway Migration; en la rama `seguridad-jwt` también Spring Security y OAuth2 Resource Server |
 | Base de datos | PostgreSQL 17 (`gestion_productos`) |
 
 ## Configuración de la conexión
@@ -884,3 +885,201 @@ Reglas de negocio en los servicios:
 **Producto con `proveedorId`.** `PUT /api/productos/4` asigna el proveedor 2 al teclado:
 
 ![Producto con proveedorId](evidencias/correcciones/C10_producto_con_proveedorId.jpg)
+
+
+---
+
+# Práctica guiada n.º 9: Seguridad con Spring Security y JWT
+
+Rama: **`seguridad-jwt`**. Caso: Comercial NicaMarket, S. A. Se agregó inicio de sesión con JWT (HS256) y reglas de acceso por rol al CRUD existente, que se conserva completo (productos, categorías, proveedores y etiquetas).
+
+| Rol | Permisos |
+|---|---|
+| Invitado | `GET /api/publico/saludo` y `POST /api/auth/login` |
+| USER | Consultar productos y categorías |
+| ADMIN | Consultar y modificar productos y categorías |
+
+## Instrucciones breves para ejecutar
+
+1. Cambiar a la rama: `git checkout seguridad-jwt`.
+2. Generar una clave de 32 bytes aleatorios en Base64 con la clase temporal `GenerarClave` del documento (no se incluye en el repositorio):
+
+   ```java
+   import java.security.SecureRandom;
+   import java.util.Base64;
+
+   public class GenerarClave {
+       public static void main(String[] args) {
+           byte[] bytes = new byte[32];
+           new SecureRandom().nextBytes(bytes);
+           System.out.println(Base64.getEncoder().encodeToString(bytes));
+       }
+   }
+   ```
+
+3. En IntelliJ IDEA: **Run → Edit Configurations… → GestionProductosApplication → Environment variables** y agregar `JWT_SECRET_BASE64=<valor generado>`. Si la variable falta, la aplicación no inicia y muestra `Configure JWT_SECRET_BASE64 en IntelliJ`.
+4. Ejecutar la aplicación (PostgreSQL en `localhost:5432`, base `gestion_productos`; Flyway valida las migraciones V1 a V4).
+5. Importar en Postman la colección `postman/NicaMarket-JWT.postman_collection.json`. La variable `baseUrl` vale `http://localhost:8080`. Las peticiones de login guardan el token en las variables `tokenAdmin` y `tokenUser`, así que basta con ejecutar primero **2. Login ADMIN** y **2b. Login USER**.
+
+> La clave **no** está en el repositorio ni en `application.properties`; se lee únicamente de la variable de entorno. Los tokens vencen a los 30 minutos y en las capturas el token emitido está tapado.
+
+### Usuarios de laboratorio (solo desarrollo)
+
+| Usuario | Contraseña | Rol |
+|---|---|---|
+| `admin` | `Admin123!` | ADMIN |
+| `operador` | `Operador123!` | USER |
+
+## Archivos agregados
+
+```
+ni/edu/uam/gestion_productos/
+├── config/SecurityConfig.java        (usuarios, AuthenticationManager, JwtEncoder/JwtDecoder, reglas por rol)
+├── controller/AuthController.java    (POST /api/auth/login y GET /api/auth/perfil)
+├── controller/PublicoController.java (GET /api/publico/saludo)
+├── dto/LoginRequest.java
+├── dto/LoginResponse.java
+└── service/TokenService.java         (emite el JWT: issuer, iat, exp = 30 min, sub, roles)
+```
+
+**Adaptaciones al proyecto:** el documento usa el paquete `com.example.factura` con carpetas `controllers` y `services`; aquí se usó el paquete existente `ni.edu.uam.gestion_productos` con las carpetas `controller` y `service` que ya tenía el proyecto. El documento indica Spring Boot 3.x / Security 6.x; este proyecto usa Spring Boot 4.1.1 / Spring Security 7.1.1 y el código de la guía compiló y funcionó sin cambios (solo se omitió el import `Customizer`, que no se usa). Las dependencias se insertaron dentro del bloque `<dependencies>` existente.
+
+## Reglas de autorización (SecurityConfig)
+
+```java
+.authorizeHttpRequests(auth -> auth
+    // Reto adicional: el perfil exige token (va antes de /api/auth/**)
+    .requestMatchers("/api/auth/perfil").authenticated()
+    .requestMatchers("/api/auth/**", "/api/publico/**").permitAll()
+    .requestMatchers(HttpMethod.GET, "/api/productos/**").hasAnyRole("USER", "ADMIN")
+    .requestMatchers("/api/productos/**").hasRole("ADMIN")
+    // Reto final: categorías por rol.
+    .requestMatchers(HttpMethod.GET, "/api/categorias/**").hasAnyRole("USER", "ADMIN")
+    .requestMatchers("/api/categorias/**").hasRole("ADMIN")
+    .anyRequest().authenticated()
+)
+```
+
+Las reglas más específicas van antes que las generales: Spring Security aplica la primera que coincide. Por eso `/api/auth/perfil` aparece antes de `/api/auth/**` (si no, quedaría público), y la regla `GET` de cada recurso aparece antes de la regla general que exige ADMIN para POST, PUT y DELETE. El patrón `/api/categorias/**` cubre tanto `/api/categorias` como `/api/categorias/{id}`.
+
+## Pruebas de la guía (sección 7)
+
+| # | Solicitud | Token | Esperado | Obtenido | Evidencia |
+|---|---|---|---|---|---|
+| 1 | `GET /api/publico/saludo` | Sin token | 200 | **200 OK** | `J1_saludo_publico_200.jpg` |
+| 2 | `POST /api/auth/login` | Credenciales válidas | 200 + JWT | **200 OK** + token Bearer | `J2_login_admin_200.jpg` |
+| 3 | `POST /api/auth/login` | Contraseña incorrecta | 401 | **401 Unauthorized** | `J3_login_incorrecto_401.jpg` |
+| 4 | `GET /api/productos` | Sin token | 401 | **401 Unauthorized** | `J4_productos_sin_token_401.jpg` |
+| 5 | `GET /api/productos` | Token USER | 200 | **200 OK** | `J5_productos_token_user_200.jpg` |
+| 6 | `POST /api/productos` | Token USER | 403 | **403 Forbidden** | `J6_post_producto_user_403.jpg` |
+| 7 | `GET /api/productos` | Token modificado | 401 | **401 Unauthorized** | `J7_token_modificado_401.jpg` |
+| 8 | `POST /api/productos` | Token ADMIN | Permiso concedido | **200 OK** (producto creado) | `J8_post_producto_admin_200.jpg` |
+
+## Reto final: categorías por rol (sección 8)
+
+| # | Solicitud | Token | Obtenido | Por qué se obtuvo ese código | Evidencia |
+|---|---|---|---|---|---|
+| R1 | `GET /api/categorias` | USER | **200 OK** | El token es válido y la regla `GET /api/categorias/**` admite USER y ADMIN. | `R1_get_categorias_user_200.jpg` |
+| R2 | `POST /api/categorias` | USER | **403 Forbidden** | El usuario está autenticado, pero POST solo lo permite el rol ADMIN. | `R2_post_categoria_user_403.jpg` |
+| R3 | `POST /api/categorias` | ADMIN | **200 OK** | ADMIN tiene permiso y los datos son válidos; se creó la categoría (id 5). | `R3_post_categoria_admin_200.jpg` |
+| R4 | `PUT /api/categorias/{id}` | USER | **403 Forbidden** | Autenticado, pero sin el rol ADMIN que exige PUT. | `R4_put_categoria_user_403.jpg` |
+| R5 | `PUT /api/categorias/{id}` | ADMIN | **200 OK** | ADMIN autorizado; la categoría se actualizó. | `R5_put_categoria_admin_200.jpg` |
+| R6 | `DELETE /api/categorias/{id}` | USER | **403 Forbidden** | Autenticado, pero DELETE solo lo permite ADMIN. | `R6_delete_categoria_user_403.jpg` |
+| R7 | `DELETE /api/categorias/{id}` | ADMIN | **204 No Content** | ADMIN autorizado; la categoría (sin productos) se eliminó y no hay cuerpo de respuesta. | `R7_delete_categoria_admin_204.jpg` |
+| R8 | `GET /api/categorias` | Sin token | **401 Unauthorized** | No se envió credencial: el recurso está protegido y no se sabe quién llama. | `R8_get_categorias_sin_token_401.jpg` |
+| R9 | `GET /api/categorias/1` | `token-invalido` | **401 Unauthorized** | `JwtDecoder` no pudo validar el token (formato y firma inválidos), así que no hay autenticación. | `R9_get_categoria_token_invalido_401.jpg` |
+
+`POST /api/auth/login` sigue siendo público (pruebas 2 y 3).
+
+## Reto adicional opcional: `GET /api/auth/perfil`
+
+Devuelve el usuario (`sub`) y los roles del JWT recibido, junto con la fecha de vencimiento. La regla `.requestMatchers("/api/auth/perfil").authenticated()` va antes de `permitAll()` para `/api/auth/**`, así que las solicitudes anónimas se rechazan.
+
+```java
+@GetMapping("/perfil")
+public Map<String, Object> perfil(@AuthenticationPrincipal Jwt jwt) {
+    List<String> roles = jwt.getClaimAsStringList("roles");
+    return Map.of(
+        "usuario", jwt.getSubject(),
+        "roles", roles,
+        "expira", jwt.getExpiresAt().toString());
+}
+```
+
+| # | Solicitud | Token | Obtenido | Evidencia |
+|---|---|---|---|---|
+| A1 | `GET /api/auth/perfil` | ADMIN | **200 OK** `{"usuario":"admin","roles":["ADMIN"],...}` | `A1_perfil_admin_200.jpg` |
+| A2 | `GET /api/auth/perfil` | Sin token | **401 Unauthorized** | `A2_perfil_sin_token_401.jpg` |
+
+## Significado de los códigos HTTP obtenidos
+
+- **200 OK / 204 No Content:** la petición pasó la autenticación y la autorización, y la operación se realizó. 204 indica éxito sin cuerpo (DELETE).
+- **401 Unauthorized:** no hay una autenticación válida: falta el token, el token fue alterado o es inválido, o las credenciales del login son incorrectas.
+- **403 Forbidden:** el usuario sí está autenticado (token válido), pero su rol no tiene permiso para esa operación.
+
+## Autenticación vs. autorización
+
+- **Autenticación** responde a *¿quién eres?*: el login verifica usuario y contraseña y entrega un JWT firmado; en cada petición, el `JwtDecoder` valida ese token para identificar al usuario. Si falla, se obtiene **401**.
+- **Autorización** responde a *¿qué puedes hacer?*: con el usuario ya identificado, las reglas `hasRole` / `hasAnyRole` deciden si su rol permite la operación. Si no lo permite, se obtiene **403**.
+
+## Preguntas de cierre
+
+**1. ¿En qué se diferencian HTTP 401 y 403?**
+401 significa que la petición no está autenticada: no se envió token o el token no es válido (firma alterada, formato incorrecto o vencido), por lo que el servidor no sabe quién llama. 403 significa que el servidor sí identificó al usuario, pero su rol no tiene permiso para el recurso, como USER al hacer POST, PUT o DELETE en productos o categorías.
+
+**2. ¿Por qué no basta con leer el contenido de un JWT para confiar en él?**
+El encabezado y el payload de un JWT solo están codificados en Base64URL, no cifrados: cualquiera puede leerlos y también modificarlos (por ejemplo, cambiar `"roles":["USER"]` por `["ADMIN"]`). Lo que da confianza es la **firma**: solo quien tiene la clave secreta puede generar una firma correcta para ese contenido. Por eso hay que verificar la firma, el algoritmo esperado y el vencimiento (`exp`) antes de usar los datos. La prueba 7 lo demuestra: al alterar el token, la API responde 401.
+
+**3. ¿Qué función cumple `JwtDecoder`?**
+Recibe el token Bearer de cada petición, comprueba que esté bien formado, verifica la firma HS256 con la clave secreta y valida las fechas (`exp`). Si todo es correcto, devuelve el objeto `Jwt` con sus claims, que el `JwtAuthenticationConverter` transforma en la autenticación del usuario (el claim `roles` pasa a ser `ROLE_ADMIN` o `ROLE_USER`). Si algo falla, lanza una excepción y la respuesta es 401.
+
+**4. ¿Qué riesgos ocasionaría publicar la clave utilizada para firmar tokens?**
+Con HS256 la misma clave firma y valida. Si se publica, cualquiera puede fabricar tokens válidos con el usuario, los roles y el vencimiento que quiera (por ejemplo, hacerse ADMIN) y la API los aceptaría: podría crear, modificar o eliminar datos y suplantar a otros usuarios. También podría falsificar tokens de cualquier sistema que use esa clave. La única solución sería cambiar la clave, con lo que se invalidan todos los tokens emitidos. Por eso la clave va en una variable de entorno, no en el código, en `application.properties` ni en capturas.
+
+## Commits de la rama `seguridad-jwt`
+
+| Commit | Descripción |
+|---|---|
+| `f32fc16` | Paso 2: dependencias `spring-boot-starter-security` y `spring-boot-starter-oauth2-resource-server` |
+| `b716aad` | Paso 5: `SecurityConfig` (usuarios, JWT HS256, reglas de productos) |
+| `9bb3690` | Paso 6: `LoginRequest` y `LoginResponse` |
+| `da3996f` | Paso 6: `TokenService` |
+| `58788b5` | Paso 6: `AuthController` (login) |
+| `2283b91` | Paso 6: `PublicoController` |
+| `fef56a7` | Paso 7: colección de Postman (pruebas 1 a 8) |
+| `169a49d` | Paso 8: reto final, categorías por rol |
+| `0bb6140` | Reto adicional: `GET /api/auth/perfil` |
+
+## Evidencias en Postman (Práctica 9)
+
+### Pruebas de la guía
+
+![1. Saludo público 200](evidencias/jwt/J1_saludo_publico_200.jpg)
+![2. Login ADMIN 200](evidencias/jwt/J2_login_admin_200.jpg)
+![3. Login incorrecto 401](evidencias/jwt/J3_login_incorrecto_401.jpg)
+![4. Productos sin token 401](evidencias/jwt/J4_productos_sin_token_401.jpg)
+![5. Productos con token USER 200](evidencias/jwt/J5_productos_token_user_200.jpg)
+![6. POST producto con USER 403](evidencias/jwt/J6_post_producto_user_403.jpg)
+![7. Token modificado 401](evidencias/jwt/J7_token_modificado_401.jpg)
+![8. POST producto con ADMIN 200](evidencias/jwt/J8_post_producto_admin_200.jpg)
+
+### Reto final: categorías por rol
+
+![R1. GET categorías con USER 200](evidencias/jwt/R1_get_categorias_user_200.jpg)
+![R2. POST categoría con USER 403](evidencias/jwt/R2_post_categoria_user_403.jpg)
+![R3. POST categoría con ADMIN 200](evidencias/jwt/R3_post_categoria_admin_200.jpg)
+![R4. PUT categoría con USER 403](evidencias/jwt/R4_put_categoria_user_403.jpg)
+![R5. PUT categoría con ADMIN 200](evidencias/jwt/R5_put_categoria_admin_200.jpg)
+![R6. DELETE categoría con USER 403](evidencias/jwt/R6_delete_categoria_user_403.jpg)
+![R7. DELETE categoría con ADMIN 204](evidencias/jwt/R7_delete_categoria_admin_204.jpg)
+![R8. GET categorías sin token 401](evidencias/jwt/R8_get_categorias_sin_token_401.jpg)
+![R9. GET categoría con token inválido 401](evidencias/jwt/R9_get_categoria_token_invalido_401.jpg)
+
+### Reto adicional: perfil
+
+![A1. Perfil con ADMIN 200](evidencias/jwt/A1_perfil_admin_200.jpg)
+![A2. Perfil sin token 401](evidencias/jwt/A2_perfil_sin_token_401.jpg)
+
+## Conclusión (Práctica 9)
+
+La API pasó de estar abierta a exigir un JWT firmado para todo recurso que no sea público. El login emite tokens HS256 con vencimiento de 30 minutos y el rol del usuario, y Spring Security valida cada token y aplica las reglas por rol: USER solo consulta productos y categorías, mientras que ADMIN además los crea, modifica y elimina. Las pruebas en Postman confirman los códigos 200, 401 y 403 en cada caso, y el repositorio no contiene la clave ni tokens vigentes.
